@@ -158,7 +158,7 @@ def run():
         df = pd.read_csv(uploaded_file)
         st.write(df)
 
-    models = ['BC', 'KO', 'DBCH', 'VG']
+    models = ['BC', 'KO', 'DBCH', 'VG', 'VGBCCH', 'FX']
 
     # select models multiple
     selected_models = st.multiselect('Select models', models)
@@ -238,7 +238,7 @@ def run():
         f.par = (*par_theta, *f.setting['parameter'])
         if 'VG' in f.selectedmodel:
             f2 = copy.deepcopy(f)
-            result.append(f2)
+            result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "VG"})
 
         # KO (Kosugi) model
         if 'KO' in f.selectedmodel or 'FX' in f.selectedmodel:
@@ -353,6 +353,50 @@ def run():
             if 'DBCH' in f.selectedmodel:
                 result.append({'r2_ht': dbch.r2_ht, 'aic_ht': dbch.aic_ht, "id": name, "model": "DBCH"})
 
+
+            # VG1BC2-CH model
+    
+        if 'VGBCCH' in f.selectedmodel:
+            f.set_model('VG1BC2-CH', const=[*con_q, 'q=1'])
+            if dbch.success:
+                n1 = l1 + 1
+                m1 = 1-1/n1
+                if m1 < 0.1:
+                    m1 = 0.1
+                if m1 > 0.8:
+                    m1 = 0.8
+                f.ini = (*q, w1, 1/hb, m1, l2)
+                f.optimize()
+                if not f.success:
+                    f.b_qs = (max(f.swrc[1]) * 0.95,
+                              max(f.swrc[1]) * min(1.05, f.max_qs))
+                    f.b_qr = (0, min(f.swrc[1]) / 10)
+                    f.ini = (*ini_q, w1, 1/hb, m, l2)
+                    f.optimize()
+                    if not f.success:
+                        f.ini = (*ini_q, 0.9, 1/hb, m, l2)
+                        f.b_lambda2 = (l2 * 0.8, l2 * 1.2)
+                        f.optimize()
+                    f.b_qs = b_qs
+                    f.b_qr = (0, np.inf)
+                    f.b_lambda2 = b_lambda_i
+                    f2 = copy.deepcopy(f)
+                    f.ini = f.fitted
+                    f.optimize
+                    if not f.success:
+                        f = copy.deepcopy(f2)
+            else:
+                f.ini = (*ini_q, 0.9, a, m, m/2)
+                f.optimize()
+            if f.success:
+                w1, a1, m1, l2 = f.fitted[-4:]
+                n1 = 1/(1-m1)
+                q = f.fitted[:-4]
+                f.fitted_show = (*q, w1, 1/a1, n1, l2)
+            f.setting = model('VGBCCH')
+            f.par = (*par_theta, *f.setting['parameter'])
+            vgbcch = copy.deepcopy(f)
+            result.append({'r2_ht': vgbcch.r2_ht, 'aic_ht': vgbcch.aic_ht, "id": name, "model": "VGBCCH"})
 
 
     # show results
