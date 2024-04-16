@@ -226,7 +226,7 @@ def run():
                 f.par = (*par_theta, *f.setting['parameter'])
                 f2 = copy.deepcopy(f)
 
-                result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "BC"})
+                result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "BC", 'parameter_names': f2.par, 'parameter_values': f2.fitted})
 
             # VG (van Genuchten) model
             f.set_model('VG', const=[*con_q, 'q=1'])
@@ -242,7 +242,7 @@ def run():
             f.par = (*par_theta, *f.setting['parameter'])
             if 'VG' in f.selectedmodel:
                 f2 = copy.deepcopy(f)
-                result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "VG"})
+                result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "VG", 'parameter_names': f2.par, 'parameter_values': f2.fitted})
 
             # KO (Kosugi) model
             if 'KO' in f.selectedmodel or 'FX' in f.selectedmodel:
@@ -276,7 +276,7 @@ def run():
                     f.fitted_show = f.fitted
                     f.par = (*par_theta, *f.setting['parameter'])
                     f2 = copy.deepcopy(f)
-                    result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "KO"})
+                    result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "KO", 'parameter_names': f2.par, 'parameter_values': f2.fitted})
 
             # FX (Fredlund and Xing) model
             if 'FX' in f.selectedmodel:
@@ -305,7 +305,7 @@ def run():
                 f.fitted_show = f.fitted
                 f.par = (*par_theta, *f.setting['parameter'])
                 f2 = copy.deepcopy(f)
-                result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "FX"})
+                result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "FX", 'parameter_names': f2.par, 'parameter_values': f2.fitted})
 
             
             # Bimodal model
@@ -355,7 +355,7 @@ def run():
                 f.par = (*par_theta, *f.setting['parameter'])
                 dbch = copy.deepcopy(f)
                 if 'DBCH' in f.selectedmodel:
-                    result.append({'r2_ht': dbch.r2_ht, 'aic_ht': dbch.aic_ht, "id": name, "model": "DBCH"})
+                    result.append({'r2_ht': dbch.r2_ht, 'aic_ht': dbch.aic_ht, "id": name, "model": "DBCH", 'parameter_names': dbch.par, 'parameter_values': dbch.fitted})
 
 
                 # VG1BC2-CH model
@@ -400,7 +400,7 @@ def run():
                 f.setting = model('VGBCCH')
                 f.par = (*par_theta, *f.setting['parameter'])
                 vgbcch = copy.deepcopy(f)
-                result.append({'r2_ht': vgbcch.r2_ht, 'aic_ht': vgbcch.aic_ht, "id": name, "model": "VGBCCH"})
+                result.append({'r2_ht': vgbcch.r2_ht, 'aic_ht': vgbcch.aic_ht, "id": name, "model": "VGBCCH", 'parameter_names': vgbcch.par, 'parameter_values': vgbcch.fitted})
 
 
         # show results
@@ -413,7 +413,11 @@ def run():
             # rename columns
             group = group.rename(columns={'r2_ht': 'R2', 'aic_ht': 'AIC'})
             st.write(name[0])
-            st.write(group[['R2', 'AIC', 'model']])
+            group = group.drop(columns=['id'])
+            st.markdown(group.to_html(escape=False), unsafe_allow_html=True)
+
+        st.write('Download results')
+        st.write(result_df)
             
 
 
