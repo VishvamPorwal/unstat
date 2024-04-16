@@ -2,4 +2,4 @@ altair
 numpy
 pandas
 pydeck
-streamlit
+unsatfit==5.1
