@@ -408,17 +408,30 @@ def run():
         # group by "id" and "model"
         df_grouped = result_df.groupby(['id'])
 
-        for name, group in df_grouped:
-            group = group.reset_index(drop=True)
-            # rename columns
-            group = group.rename(columns={'r2_ht': 'R2', 'aic_ht': 'AIC'})
-            st.write(name[0])
-            group = group.drop(columns=['id'])
-            st.markdown(group.to_html(escape=False), unsafe_allow_html=True)
+        # for name, group in df_grouped:
+        #     group = group.reset_index(drop=True)
+        #     # rename columns
+        #     group = group.rename(columns={'r2_ht': 'R2', 'aic_ht': 'AIC'})
+        #     st.write(name[0])
+        #     group = group.drop(columns=['id'])
+        #     st.markdown(group.to_html(escape=False), unsafe_allow_html=True)
 
         st.write('Download results')
-        st.write(result_df)
-            
+        # download by models
+        for mod in selected_models:
+            result_df_mod = result_df[result_df['model'] == mod]
+            result_df_mod = result_df_mod.drop(columns=['model'])
+            pns = []
+            for pn in result_df_mod['parameter_names'].values[0]:
+                pns.append(pn)
+            # columns for each parameter
+            result_df_mod = result_df_mod.drop(columns=['parameter_names'])
+            print(pns)
+            for i, pn in enumerate(pns):
+                result_df_mod[pn] = result_df_mod['parameter_values'].apply(lambda x: x[i])
+            result_df_mod = result_df_mod.drop(columns=['parameter_values'])
+            st.markdown(f"## {mod}")
+            st.write(result_df_mod)
 
 
 if __name__ == "__main__":
