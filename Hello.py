@@ -160,7 +160,7 @@ def run():
         df = pd.read_csv(uploaded_file)
         st.write(df)
 
-        models = ['BC', 'KO', 'DBCH', 'VG', 'VGBCCH', 'FX']
+        models = ['BC', 'KO', 'DBCH', 'VG', 'VGBCCH', 'FX', 'DVCH', 'KOBCCH', 'DB', 'DV', 'DK']
 
         # select models multiple
         selected_models = st.multiselect('Select models', models)
@@ -182,6 +182,7 @@ def run():
             f.max_lambda_i = 10
             f.max_n_i = 8
             f.swrc = (h_t, theta)
+            f.min_sigma_i = 0.2
             f.selectedmodel = selected_models
 
             f.show_fig = False
@@ -218,7 +219,7 @@ def run():
                     f.b_qs = b_qs
                     f2 = copy.deepcopy(f)
                     f.ini = f.fitted
-                    f.optimize
+                    # f.optimize
                     if not f.success:
                         f = copy.deepcopy(f2)
                 f.fitted_show = f.fitted
@@ -298,7 +299,7 @@ def run():
                     f.b_qr = (0, np.inf)
                     f2 = copy.deepcopy(f)
                     f.ini = f.fitted
-                    f.optimize
+                    # f.optimize
                     if not f.success:
                         f = copy.deepcopy(f2)
                 f.setting = model('FX')
@@ -343,7 +344,7 @@ def run():
                         f.b_lambda1 = f.b_lambda2 = b_lambda_i
                     f2 = copy.deepcopy(f)
                     f.ini = f.fitted
-                    f.optimize
+                    # f.optimize
                     if not f.success:
                         f = copy.deepcopy(f2)
                 if f.success:
@@ -386,7 +387,7 @@ def run():
                         f.b_lambda2 = b_lambda_i
                         f2 = copy.deepcopy(f)
                         f.ini = f.fitted
-                        f.optimize
+                        # f.optimize
                         if not f.success:
                             f = copy.deepcopy(f2)
                 else:
@@ -401,6 +402,246 @@ def run():
                 f.par = (*par_theta, *f.setting['parameter'])
                 vgbcch = copy.deepcopy(f)
                 result.append({'r2_ht': vgbcch.r2_ht, 'aic_ht': vgbcch.aic_ht, "id": name, "model": "VGBCCH", 'parameter_names': vgbcch.par, 'parameter_values': vgbcch.fitted})
+            # dual-VG-CH model
+            if 'DVCH' in f.selectedmodel:
+                f.set_model('dual-VG-CH', const=[*con_q, 'q=1'])
+                w1, a, m1, m2 = f.get_init()  # Get initial parameter
+                if m1 > max_m_i:
+                    m1 = max_m_i - 0.0001
+                if m2 > max_m_i:
+                    m2 = max_m_i - 0.0001
+                f.ini = (*ini_q, w1, a, m1, m2)
+                f.optimize()
+                if not f.success:
+                    f.b_qs = (max(f.swrc[1]) * 0.95,
+                            max(f.swrc[1]) * min(1.05, f.max_qs))
+                    f.b_m = (0, 0.9)
+                    a, m = f.get_init_vg()
+                    if m > 0.9:
+                        m = 0.9
+                    f.ini = (*ini_q, 0.5, a, m, m)
+                    f.optimize()
+                    f.b_qs = b_qs
+                    f.b_m = (0, max_m_i)
+                    f2 = copy.deepcopy(f)
+                    f.ini = f.fitted
+                    # f.optimize
+                    if not f.success:
+                        f = copy.deepcopy(f2)
+                if f.success:
+                    w1, a1, m1, m2 = f.fitted[-4:]
+                    q = f.fitted[:-4]
+                    n1 = 1/(1-m1)
+                    n2 = 1/(1-m2)
+                    f.fitted_show = (*q, w1, a1, n1, n2)
+                f.setting = model('DVCH')
+                f.par = (*par_theta, *f.setting['parameter'])
+                dvch = copy.deepcopy(f)
+                if 'DVCH' in f.selectedmodel:
+                    result.append({'r2_ht': dvch.r2_ht, 'aic_ht': dvch.aic_ht, "id": name, "model": "DVCH", 'parameter_names': dvch.par, 'parameter_values': dvch.fitted})
+
+            # KO1BC2-CH model
+            if 'KOBCCH' in f.selectedmodel:
+                f.set_model('KO1BC2-CH', const=[*con_q])
+                f.b_sigma = (f.min_sigma_i, np.inf)
+                if dbch.success:
+                    s1 = 1.2*l1**(-0.8)
+                    if s1 > 2:
+                        s1 = 2
+                    if s1 < f.min_sigma_i:
+                        s1 = f.min_sigma_i + 0.00001
+                    if l2 > f.max_lambda_i:
+                        l2 = f.max_lambda_i - 0.00001
+                    f.ini = (*q, w1, hb, s1, l2)
+                    f.optimize()
+                    if not f.success:
+                        f.b_qs = (max(f.swrc[1]) * 0.95,
+                                max(f.swrc[1]) * min(1.05, f.max_qs))
+                        f.b_qr = (0, min(f.swrc[1]) / 10)
+                        f.ini = (*ini_q, w1, hb, s1, l2)
+                        if s1 < f.min_sigma_i:
+                            s1 = f.min_sigma_i + 0.00001
+                        if l2 > f.max_lambda_i:
+                            l2 = f.max_lambda_i - 0.00001
+                        f.optimize()
+                        if not f.success:
+                            f.ini = (*ini_q, 0.9, hb, s1, l2)
+                            f.b_lambda2 = (l2 * 0.8, min(l2 * 1.2, f.max_lambda_i))
+                            f.optimize()
+                        f.b_qs = b_qs
+                        f.b_qr = (0, np.inf)
+                        f.b_lambda2 = b_lambda_i
+                        f2 = copy.deepcopy(f)
+                        f.ini = f.fitted
+                        # f.optimize
+                        if not f.success:
+                            f = copy.deepcopy(f2)
+                else:
+                    w1, hm, sigma1, l2 = f.get_init_kobcch()
+                    if l2 > f.max_lambda_i:
+                        l2 = f.max_lambda_i - 0.00001
+                    f.ini = (*ini_q, w1, hm, sigma1, l2)
+                    f.optimize()
+                if f.success:
+                    w1, hm, s1, l2 = f.fitted[-4:]
+                    q = f.fitted[:-4]
+                    f.fitted_show = (*q, w1, hm, s1, l2)
+                f.setting = model('KOBCCH')
+                f.par = (*par_theta, *f.setting['parameter'])
+                vgbcch = copy.deepcopy(f)
+                result.append({'r2_ht': vgbcch.r2_ht, 'aic_ht': vgbcch.aic_ht, "id": name, "model": "KOBCCH", 'parameter_names': vgbcch.par, 'parameter_values': vgbcch.fitted})
+
+            # dual-BC model
+            if 'DB' in f.selectedmodel:
+                f.set_model('dual-BC', const=[*con_q])
+                if dbch.success:
+                    hb, hc, l1, l2 = dbch.fitted[-4:]
+                    w1 = 1/(1+(hc/hb)**(l2-l1))
+                    q = dbch.fitted[:-4]
+                    f.ini = (*ini_q, w1, hb*0.9, l1, (hb*max(f.swrc[0]))**0.5, l2)
+                    f.b_qs = (max(f.swrc[1]) * 0.95,
+                            max(f.swrc[1]) * min(1.05, f.max_qs))
+                    f.optimize()
+                    if not f.success:
+                        f.b_qr = (0, min(f.swrc[1]) / 10)
+                        f.ini = (*ini_q, w1, hb*0.9, l1, hb*1.1, l2)
+                        f.optimize()
+                        if not f.success:
+                            hb, l = f.get_init_bc()
+                            if l > f.max_lambda_i:
+                                l = f.max_lambda_i - 0.00001
+                            f.b_lambda1 = f.b_lambda2 = (
+                                0, min(l * 1.1, f.max_lambda_i))
+                            f.ini = (*ini_q, 0.7, hb, l, hb, l)
+                            f.optimize()
+                        f.b_qr = (0, np.inf)
+                        f.b_lambda1 = f.b_lambda2 = b_lambda_i
+                        f2 = copy.deepcopy(f)
+                        f.ini = f.fitted
+                        # f.optimize
+                        if not f.success or f.r2_ht < f2.r2_ht:
+                            f = copy.deepcopy(f2)
+                    f.b_qs = b_qs
+                    f2 = copy.deepcopy(f)
+                    f.ini = f.fitted
+                    # f.optimize
+                    if not f.success or f.r2_ht < f2.r2_ht:
+                        f = copy.deepcopy(f2)
+                else:
+                    hb, l = f.get_init_bc()
+                    if l > f.max_lambda_i:
+                        l = f.max_lambda_i - 0.00001
+                    f.ini = (*ini_q, 0.7, hb, l, hb, l)
+                    f.optimize()
+                if f.success:
+                    w1, hb1, l1, hb2, l2 = f.fitted[-5:]
+                    q = f.fitted[:-5]
+                    if hb1 > hb2:
+                        hb1, hb2 = hb2, hb1
+                        l1, l2 = l2, l1
+                        w1 = 1-w1
+                        f.fitted = (*q, w1, hb1, l1, hb2, l2)
+                    f.fitted_show = f.fitted
+                f.setting = model('DB')
+                f.par = (*par_theta, *f.setting['parameter'])
+                f2 = copy.deepcopy(f)
+                result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "DB", 'parameter_names': f2.par, 'parameter_values': f2.fitted})
+
+            # dual-VG model
+            if 'DV' in f.selectedmodel or 'DK' in f.selectedmodel:
+                f.set_model('dual-VG', const=[*con_q, 'q=1'])
+                w1, a1, m1, a2, m2 = init_vg2 = f.get_init_vg2()
+                if m1 > max_m_i:
+                    m1 = max_m_i - 0.0001
+                if m2 > max_m_i:
+                    m2 = max_m_i - 0.0001
+                f.ini = (*ini_q, w1, a1, m1, a2, m2)
+                f.optimize()
+                vg2_r2 = 0
+                if f.success:
+                    vg2_r2 = f.r2_ht
+                    w1, a1, m1, a2, m2 = f.fitted[-5:]
+                    q = f.fitted[:-5]
+                    if a1 < a2:
+                        a1, a2 = a2, a1
+                        m1, m2 = m2, m1
+                        w1 = 1-w1
+                        f.fitted = (*q, w1, a1, m1, a2, m2)
+                    n1 = 1/(1-m1)
+                    n2 = 1/(1-m2)
+                    f.fitted_show = (*q, w1, a1, n1, a2, n2)
+                f.setting = model('DV')
+                f.par = (*par_theta, *f.setting['parameter'])
+                f2 = copy.deepcopy(f)
+                if 'DV' in f.selectedmodel:
+                    result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "DV", 'parameter_names': f2.par, 'parameter_values': f2.fitted})
+
+            # dual-KO model
+            if 'DK' in f.selectedmodel:
+                if f.success:
+                    if n1 < 1.4:
+                        n1 = 1.4
+                    s1 = 1.2*(n1-1)**(-0.8)
+                    if s1 < f.min_sigma_i:
+                        s1 = f.min_sigma_i + 0.00001
+                    if n2 < 1.4:
+                        n2 = 1.4
+                    s2 = 1.2*(n2-1)**(-0.8)
+                    if s2 < f.min_sigma_i:
+                        s2 = f.min_sigma_i + 0.00001
+                    if s2 > 2:
+                        s2 = 2
+                    hm1 = 1/a1
+                    hm2 = 1/a2
+                    f.set_model('dual-KO', const=[*con_q])
+                    f.b_w1 = (max(w1 * 0.5, w1-0.15), min(w1+0.15, 1-(1-w1)*0.5))
+                    f.b_hm1 = (hm1 / 8, hm1 * 8)
+                    f.b_hm2 = (min(max(f.swrc[0])*0.5, hm2 / 8), hm2 * 8)
+                    f.b_sigma = (f.min_sigma_i, 2.5)
+                    f.ini = (*q, w1, hm1, s1, hm2, s2)
+                    f.optimize()
+                    f.b_w1 = (0, 1)
+                    f.b_hm1 = f.b_hm2 = (0, np.inf)
+                    if not f.success or f.r2_ht < vg2_r2 - 0.05:
+                        f.b_qs = (max(f.swrc[1]) * 0.95,
+                                max(f.swrc[1]) * min(1.05, f.max_qs))
+                        f.b_qr = (0, min(f.swrc[1]) / 10)
+                        f.ini = (*ini_q, w1, 1/a1, s1, 1/a2, s2)
+                        f.optimize()
+                        if not f.success:
+                            a, m = f.get_init_vg()
+                            n = 1/(1-m)
+                            if n < 1.4:
+                                n = 1.4
+                            s = 1.2*(n-1)**(-0.8)
+                            f.ini = (*ini_q, 0.5, 1/a, s, 1/a, s)
+                            f.optimize()
+                        f.b_qs = b_qs
+                        f.b_qr = (0, np.inf)
+                        f2 = copy.deepcopy(f)
+                        f.ini = f.fitted
+                        f.optimize()
+                        if not f.success:
+                            f = copy.deepcopy(f2)
+                    f.b_sigma = (f.min_sigma_i, np.inf)
+                    f2 = copy.deepcopy(f)
+                    f.ini = f.fitted
+                    f.optimize()
+                    if not f.success or f.r2_ht < f2.r2_ht:
+                        f = copy.deepcopy(f2)
+                    if f.success:
+                        w1, hm1, s1, hm2, s2 = f.fitted[-5:]
+                        q = f.fitted[:-5]
+                        if hm1 > hm2:
+                            hm1, hm2 = hm2, hm1
+                            s1, s2 = s2, s1
+                            w1 = 1-w1
+                            f.fitted = (*q, w1, hm1, s1, hm2, s2)
+                        f.fitted_show = f.fitted
+                f.setting = model('DK')
+                f.par = (*par_theta, *f.setting['parameter'])
+                f2 = copy.deepcopy(f)
+                result.append({'r2_ht': f2.r2_ht, 'aic_ht': f2.aic_ht, "id": name, "model": "DK", 'parameter_names': f2.par, 'parameter_values': f2.fitted})
 
 
         # show results
