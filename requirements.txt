@@ -3,3 +3,4 @@ numpy
 pandas
 pydeck
 unsatfit==5.1
+plotly
