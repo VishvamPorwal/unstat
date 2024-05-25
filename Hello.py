@@ -877,6 +877,11 @@ def run():
         take_log = st.checkbox("Take log of Se", value=False)      
         
         for key, value in results_best_model.items():
+            
+            # get real values of key
+            df_key = df[df['id'] == key]
+            h_true = df_key['mbar'].values
+            true_se = df_key['swc'].values
 
             fc_330_index = h.tolist().index(330)
             pwp_15000_index = h.tolist().index(15000)
@@ -887,7 +892,9 @@ def run():
             result_fc_330 = value[fc_330_index]
             result_pwp_15000 = value[pwp_15000_index]
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=h, y=value, mode='lines', name='Se'))
+            fig.add_trace(go.Scatter(x=h, y=value, mode='lines', name='Prediction'))
+            # true values as dots
+            fig.add_trace(go.Scatter(x=h_true, y=true_se, mode='markers', name='True', marker=dict(color='purple', size=5)))
             fig.add_trace(go.Scatter
             (x=[330], y=[result_fc_330], mode='markers', name='fc_330', marker=dict(color='red', size=10)))
             fig.add_trace(go.Scatter
