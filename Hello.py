@@ -874,7 +874,7 @@ def run():
         #     st.write('Error in prediction')
         #     return
         # option to take log of Se
-        take_log = st.checkbox("Take log of Se", value=False)      
+        # take_log = st.checkbox("Take log of Se", value=False)      
         
         for key, value in results_best_model.items():
             
@@ -885,9 +885,9 @@ def run():
 
             fc_330_index = h.tolist().index(330)
             pwp_15000_index = h.tolist().index(15000)
-            if take_log:
-                value = np.array(value)
-                value = np.log(value)
+            # if take_log:
+            #     value = np.array(value)
+            #     value = np.log(value)
 
             result_fc_330 = value[fc_330_index]
             result_pwp_15000 = value[pwp_15000_index]
