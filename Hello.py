@@ -847,7 +847,7 @@ def run():
                 elif best_model == 'VG':
                     se = vg_pred(h[i], *row[-2:])
                 elif best_model == 'VGBCCH':
-                    se = vgbcch_pred(h[i], *row[-5:])
+                    se = vgbcch_pred(h[i], *row[-4:])
                 elif best_model == 'FX':
                     se = fx_pred(h[i], *row[-3:])
                 elif best_model == 'DVCH':
