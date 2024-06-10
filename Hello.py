@@ -828,8 +828,8 @@ def run():
                         st.markdown(f"## {mod}")
                         st.write(model_results[mod])
 
-        # predict Se for the best model, h = 0.00001 to 15000 in 100 intervals
-        h = np.linspace(100, 15000, 100)
+        # predict Se for the best model, h = 0.00001 to 15000 in steps of 100
+        h = list(range(100, 15001, 100))
         # add 330 in h
         h = np.append(h, 330)
         h = np.append(h, 0.00001)
@@ -898,6 +898,13 @@ def run():
 
             fig.update_layout(title=f'Se vs h for {key}', xaxis_title='h', yaxis_title='Se')
             st.plotly_chart(fig)
+
+        
+        # show results in table
+        st.markdown("## Predictions")
+        # make h the index of results_best_model df
+        results_best_model_df = pd.DataFrame(results_best_model, index=h)
+        st.write(results_best_model_df)
 
 
 
